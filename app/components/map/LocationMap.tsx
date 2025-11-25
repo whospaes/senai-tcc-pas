@@ -63,7 +63,7 @@ function MapUpdater({ navigateToCoords }: { navigateToCoords?: { lat: number; ln
       console.log('MapUpdater: navegando para', navigateToCoords)
       map.flyTo([navigateToCoords.lat, navigateToCoords.lng], 19, {
         animate: true,
-        duration: 2
+        duration: 1.5
       })
     }
   }, [navigateToCoords, map])
@@ -77,6 +77,7 @@ const LocationMap: React.FC<LocationMapProps> = ({ onLocationSelect, onUnitPinCl
   const [isLocating, setIsLocating] = useState(false)
   const [mapInstance, setMapInstance] = useState<L.Map | null>(null)
   const [selectedUnit, setSelectedUnit] = useState<{ nome: string; tempoEspera: string; lat: number; lng: number } | null>(null)
+  const [hasInitializedLocation, setHasInitializedLocation] = useState(false)
   
   const geocodeCache = React.useRef(new Map<string, { lat: number; lng: number } | null>())
   
@@ -126,7 +127,8 @@ const LocationMap: React.FC<LocationMapProps> = ({ onLocationSelect, onUnitPinCl
         setUserLocation({ lat: latitude, lng: longitude, address: 'Sua localização' })
         setMapCenter([latitude, longitude])
         
-        if (mapInstance) {
+        // Centralizar o mapa na localização do usuário apenas se não há navegação ativa
+        if (mapInstance && !navigateToCoords) {
           mapInstance.flyTo([latitude, longitude], 17, {
             animate: true,
             duration: 2
@@ -139,7 +141,8 @@ const LocationMap: React.FC<LocationMapProps> = ({ onLocationSelect, onUnitPinCl
         setUserLocation({ lat: defaultLat, lng: defaultLng, address: 'Jandira, SP' })
         setMapCenter([defaultLat, defaultLng])
         
-        if (mapInstance) {
+        // Centralizar no padrão se não conseguir localização e não há navegação ativa
+        if (mapInstance && !navigateToCoords) {
           mapInstance.flyTo([defaultLat, defaultLng], 15, {
             animate: true,
             duration: 2
@@ -270,20 +273,16 @@ const LocationMap: React.FC<LocationMapProps> = ({ onLocationSelect, onUnitPinCl
     }
   }, [showAllUnits, filteredUnits])
 
+  // Centralizar mapa apenas na primeira inicialização
   useEffect(() => {
-    if (navigateToCoords) {
-      console.log('Navegação solicitada para:', navigateToCoords)
-    }
-  }, [navigateToCoords])
-
-  useEffect(() => {
-    if (mapInstance && userLocation && !isLocating) {
+    if (mapInstance && userLocation && !isLocating && !hasInitializedLocation && !navigateToCoords) {
       mapInstance.flyTo([userLocation.lat, userLocation.lng], 17, {
         animate: true,
         duration: 2
       })
+      setHasInitializedLocation(true)
     }
-  }, [mapInstance, userLocation, isLocating])
+  }, [mapInstance, userLocation, isLocating, hasInitializedLocation, navigateToCoords])
 
   const isUnitSelected = (unidade: UnidadeLocation) => {
     if (!navigateToCoords) return false
